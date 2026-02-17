@@ -1,0 +1,124 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id            String        @id @default(dbgenerated("pg_catalog.gen_random_uuid()")) @db.Uuid
+  name          String
+  email         String
+  emailVerified Boolean       @default(false)
+  image         String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  publicId      Int           @default(autoincrement()) @unique @map("public_id")
+  sessions      Session[]
+  accounts      Account[]
+  patients      Patient[]     @relation("UserPatients")
+  chatMessages  ChatMessage[] @relation("UserChatMessages")
+
+  @@unique([email])
+  @@map("user")
+}
+
+model Session {
+  id        String   @id @default(dbgenerated("pg_catalog.gen_random_uuid()")) @db.Uuid
+  expiresAt DateTime
+  token     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String   @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([token])
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String   @id @default(dbgenerated("pg_catalog.gen_random_uuid()")) @db.Uuid
+  accountId             String
+  providerId            String
+  userId                String   @db.Uuid
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@unique([providerId, accountId])
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id @default(dbgenerated("pg_catalog.gen_random_uuid()")) @db.Uuid
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
+}
+
+model Jwks {
+  id         String   @id @default(dbgenerated("pg_catalog.gen_random_uuid()")) @db.Uuid
+  publicKey  String
+  privateKey String
+  createdAt  DateTime
+  expiresAt  DateTime?
+
+  @@map("jwks")
+}
+
+model Patient {
+  id           Int           @id @default(autoincrement())
+  ownerUserId  String        @db.Uuid @map("owner_user_id")
+  name         String
+  email        String
+  phone        String
+  dob          DateTime      @db.Date
+  medicalNotes String        @map("medical_notes")
+  deletedAt    DateTime?     @map("deleted_at")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+  ownerUser    User          @relation("UserPatients", fields: [ownerUserId], references: [id], onDelete: Cascade)
+  chatMessages ChatMessage[]
+
+  @@index([ownerUserId, id], map: "patients_owner_user_id_id_idx")
+  @@map("patients")
+}
+
+model ChatMessage {
+  id          Int      @id @default(autoincrement())
+  patientId   Int      @map("patient_id")
+  ownerUserId String   @db.Uuid @map("owner_user_id")
+  role        ChatRole
+  message     String
+  provider    String   @default("mock")
+  createdAt   DateTime @default(now()) @map("created_at")
+  patient     Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  ownerUser   User     @relation("UserChatMessages", fields: [ownerUserId], references: [id], onDelete: Cascade)
+
+  @@index([patientId, id], map: "chat_messages_patient_id_id_idx")
+  @@index([ownerUserId, patientId, id], map: "chat_messages_owner_user_id_patient_id_id_idx")
+  @@map("chat_messages")
+}
+
+enum ChatRole {
+  user
+  assistant
+}
