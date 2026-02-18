@@ -1,9 +1,8 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { LogOut, Pencil, Plus, Trash2, Users } from "lucide-react";
+import { LogOut, MessageSquare, Pencil, Plus, Trash2, Users } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { PatientChatModal } from "@/components/chat/patient-chat-modal";
 import { DeletePatientDialog } from "@/components/patients/delete-patient-dialog";
 import {
   PatientFormDialog,
@@ -280,7 +279,15 @@ export function DashboardPage() {
                       <TableCell>{formatDateTime(patient.updatedAt)}</TableCell>
                       <TableCell>
                         <div className="flex justify-end gap-2">
-                          <PatientChatModal patient={patient} />
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => navigate({ to: "/chat/$patientId", params: { patientId: String(patient.id) } })}
+                            className="gap-2"
+                          >
+                            <MessageSquare className="size-4" />
+                            Chat
+                          </Button>
                           <Button
                             size="sm"
                             variant="outline"
