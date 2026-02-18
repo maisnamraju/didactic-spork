@@ -1,7 +1,8 @@
 import request from "supertest";
 import { beforeEach, describe, expect, it } from "vitest";
-import { hasConfiguredTestDatabase, resetDatabase } from "../helpers/db.js";
-import { authHeader, createTestApp, registerAndLogin } from "../helpers/test-app.js";
+
+import { hasConfiguredTestDatabase, resetDatabase } from "../helpers/db";
+import { authHeader, createTestApp, registerAndLogin } from "../helpers/test-app";
 
 const describeWithDb = hasConfiguredTestDatabase() ? describe : describe.skip;
 
@@ -15,28 +16,22 @@ describeWithDb("Chat e2e", () => {
   it("stores user+assistant messages and returns AI response", async () => {
     const owner = await registerAndLogin(app, { name: "Chat Owner" });
 
-    const createPatient = await request(app)
-      .post("/patients")
-      .set(authHeader(owner.token))
-      .send({
-        name: "Chat Patient",
-        email: "chat-patient@example.com",
-        phone: "+12025550999",
-        dob: "1988-08-08",
-        medical_notes: "No known allergies",
-      });
+    const createPatient = await request(app).post("/patients").set(authHeader(owner.token)).send({
+      name: "Chat Patient",
+      email: "chat-patient@example.com",
+      phone: "+12025550999",
+      dob: "1988-08-08",
+      medical_notes: "No known allergies",
+    });
 
     expect(createPatient.status).toBe(201);
 
     const patientId = createPatient.body.id as number;
 
-    const reply = await request(app)
-      .post("/chat")
-      .set(authHeader(owner.token))
-      .send({
-        patient_id: patientId,
-        message: "How is the blood pressure trend?",
-      });
+    const reply = await request(app).post("/chat").set(authHeader(owner.token)).send({
+      patient_id: patientId,
+      message: "How is the blood pressure trend?",
+    });
 
     expect(reply.status).toBe(201);
     expect(reply.body).toMatchObject({
@@ -65,28 +60,22 @@ describeWithDb("Chat e2e", () => {
   it("returns 502 on AI failure and keeps user message persisted", async () => {
     const owner = await registerAndLogin(app, { name: "Failure Owner" });
 
-    const createPatient = await request(app)
-      .post("/patients")
-      .set(authHeader(owner.token))
-      .send({
-        name: "Failure Patient",
-        email: "failure-patient@example.com",
-        phone: "+12025550888",
-        dob: "1981-01-01",
-        medical_notes: "Hypertension",
-      });
+    const createPatient = await request(app).post("/patients").set(authHeader(owner.token)).send({
+      name: "Failure Patient",
+      email: "failure-patient@example.com",
+      phone: "+12025550888",
+      dob: "1981-01-01",
+      medical_notes: "Hypertension",
+    });
 
     expect(createPatient.status).toBe(201);
 
     const patientId = createPatient.body.id as number;
 
-    const fail = await request(app)
-      .post("/chat")
-      .set(authHeader(owner.token))
-      .send({
-        patient_id: patientId,
-        message: "Please fail __fail_ai__",
-      });
+    const fail = await request(app).post("/chat").set(authHeader(owner.token)).send({
+      patient_id: patientId,
+      message: "Please fail __fail_ai__",
+    });
 
     expect(fail.status).toBe(502);
     expect(fail.body.error.code).toBe("AI_PROVIDER_ERROR");

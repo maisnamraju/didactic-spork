@@ -1,8 +1,9 @@
 import type { Express } from "express";
 import request from "supertest";
-import { env } from "../../src/config/env.js";
-import { createApp } from "../../src/app.js";
-import { consumeEmailVerificationToken } from "../../src/lib/email-verification-token-store.js";
+
+import { createApp } from "../../src/app";
+import { env } from "../../src/config/env";
+import { consumeEmailVerificationToken } from "../../src/lib/email-verification-token-store";
 
 export interface AuthSession {
   email: string;
@@ -51,7 +52,9 @@ export async function verifyEmailForUser(app: Express, email: string): Promise<v
     });
 
   if (sendVerificationResponse.status !== 200) {
-    throw new Error(`Send verification email failed with status ${sendVerificationResponse.status}`);
+    throw new Error(
+      `Send verification email failed with status ${sendVerificationResponse.status}`,
+    );
   }
 
   const token = consumeEmailVerificationToken(email);
@@ -72,7 +75,10 @@ export async function verifyEmailForUser(app: Express, email: string): Promise<v
   }
 }
 
-export async function registerAndLogin(app: Express, overrides?: Partial<AuthSession>): Promise<AuthSession> {
+export async function registerAndLogin(
+  app: Express,
+  overrides?: Partial<AuthSession>,
+): Promise<AuthSession> {
   const email = overrides?.email ?? randomEmail("user");
   const password = overrides?.password ?? "Password123!";
   const name = overrides?.name ?? "Test User";
@@ -101,7 +107,9 @@ export async function registerAndLogin(app: Express, overrides?: Partial<AuthSes
       const verifiedSignInResponse = await signInWithEmail(app, email, password);
 
       if (verifiedSignInResponse.status !== 200) {
-        throw new Error(`Sign-in after verification failed with status ${verifiedSignInResponse.status}`);
+        throw new Error(
+          `Sign-in after verification failed with status ${verifiedSignInResponse.status}`,
+        );
       }
 
       token = readHeaderValue(verifiedSignInResponse.headers["set-auth-token"]);

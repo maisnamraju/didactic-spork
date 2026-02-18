@@ -1,8 +1,9 @@
-import type { Request, RequestHandler } from "express";
 import { fromNodeHeaders } from "better-auth/node";
-import type { AuthContext } from "../models/auth-context.model.js";
-import { ApiError } from "../utils/api-error.js";
-import { auth } from "../lib/better-auth.js";
+import type { Request, RequestHandler } from "express";
+
+import { auth } from "../lib/better-auth";
+import type { AuthContext } from "../models/auth-context.model";
+import { ApiError } from "../utils/api-error";
 
 export const requireAuth: RequestHandler = async (req, _res, next) => {
   try {

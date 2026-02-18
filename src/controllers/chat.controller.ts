@@ -1,16 +1,17 @@
 import type { RequestHandler } from "express";
-import { getAuthContext } from "../middleware/require-auth.js";
-import type { ChatReplyResponse } from "../models/chat-message.model.js";
-import { ChatService } from "../services/chat.service.js";
-import { MockAIProvider } from "../services/ai/mock.provider.js";
-import { mapChatMessageToResponse } from "../utils/mapper.js";
+
+import { getAuthContext } from "../middleware/require-auth";
+import type { ChatReplyResponse } from "../models/chat-message.model";
+import { createAIProvider } from "../services/ai/provider.factory";
+import { ChatService } from "../services/chat.service";
+import { mapChatMessageToResponse } from "../utils/mapper";
 import {
   createChatBodySchema,
   listPatientChatsQuerySchema,
   patientIdParamSchema,
-} from "../validators/chat.validator.js";
+} from "../validators/chat.validator";
 
-const chatService = new ChatService(new MockAIProvider());
+const chatService = new ChatService(createAIProvider());
 
 export const createChatController: RequestHandler = async (req, res) => {
   const auth = getAuthContext(req);

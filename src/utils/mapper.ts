@@ -1,5 +1,5 @@
-import type { ChatMessageRecord, ChatMessageResponse } from "../models/chat-message.model.js";
-import type { PatientRecord, PatientResponse } from "../models/patient.model.js";
+import type { ChatMessageRecord, ChatMessageResponse } from "../models/chat-message.model";
+import type { PatientRecord, PatientResponse } from "../models/patient.model";
 
 function toIso(date: Date): string {
   return date.toISOString();

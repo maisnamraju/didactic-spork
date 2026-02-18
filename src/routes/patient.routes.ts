@@ -1,13 +1,14 @@
 import { Router } from "express";
+
 import {
   createPatientController,
   deletePatientController,
   getPatientController,
   listPatientsController,
   updatePatientController,
-} from "../controllers/patient.controller.js";
-import { requireAuth } from "../middleware/require-auth.js";
-import { asyncHandler } from "../utils/async-handler.js";
+} from "../controllers/patient.controller";
+import { requireAuth } from "../middleware/require-auth";
+import { asyncHandler } from "../utils/async-handler";
 
 export const patientRouter = Router();
 

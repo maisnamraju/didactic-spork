@@ -1,7 +1,8 @@
 import { Router } from "express";
-import { createChatController, listPatientChatsController } from "../controllers/chat.controller.js";
-import { requireAuth } from "../middleware/require-auth.js";
-import { asyncHandler } from "../utils/async-handler.js";
+
+import { createChatController, listPatientChatsController } from "../controllers/chat.controller";
+import { requireAuth } from "../middleware/require-auth";
+import { asyncHandler } from "../utils/async-handler";
 
 export const chatRouter = Router();
 

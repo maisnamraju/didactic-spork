@@ -1,8 +1,8 @@
-import type { ChatMessageRecord, ChatReplyResponse } from "../models/chat-message.model.js";
-import type { CursorPaginatedResult } from "../models/pagination.model.js";
-import { prisma } from "../lib/prisma.js";
-import { ApiError } from "../utils/api-error.js";
-import type { AIProvider } from "./ai/provider.interface.js";
+import { prisma } from "../lib/prisma";
+import type { ChatMessageRecord, ChatReplyResponse } from "../models/chat-message.model";
+import type { CursorPaginatedResult } from "../models/pagination.model";
+import { ApiError } from "../utils/api-error";
+import type { AIProvider } from "./ai/provider.interface";
 
 export interface CursorInput {
   limit: number;
@@ -24,7 +24,10 @@ function mapMessage(record: {
 export class ChatService {
   public constructor(private readonly aiProvider: AIProvider) {}
 
-  private async getActiveOwnedPatient(ownerUserId: string, patientId: number): Promise<{
+  private async getActiveOwnedPatient(
+    ownerUserId: string,
+    patientId: number,
+  ): Promise<{
     id: number;
     name: string;
     medicalNotes: string;
@@ -49,7 +52,11 @@ export class ChatService {
     return patient;
   }
 
-  public async createReply(ownerUserId: string, patientId: number, message: string): Promise<ChatReplyResponse> {
+  public async createReply(
+    ownerUserId: string,
+    patientId: number,
+    message: string,
+  ): Promise<ChatReplyResponse> {
     const patient = await this.getActiveOwnedPatient(ownerUserId, patientId);
 
     await prisma.chatMessage.create({
@@ -133,7 +140,7 @@ export class ChatService {
           createdAt: row.createdAt,
         }),
       ),
-      next_cursor: hasMore ? sliced[sliced.length - 1]?.id ?? null : null,
+      next_cursor: hasMore ? (sliced[sliced.length - 1]?.id ?? null) : null,
     };
   }
 }

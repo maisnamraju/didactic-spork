@@ -1,7 +1,8 @@
 import { Router } from "express";
-import { sendEmailController } from "../controllers/mail.controller.js";
-import { requireAuth } from "../middleware/require-auth.js";
-import { asyncHandler } from "../utils/async-handler.js";
+
+import { sendEmailController } from "../controllers/mail.controller";
+import { requireAuth } from "../middleware/require-auth";
+import { asyncHandler } from "../utils/async-handler";
 
 export const mailRouter = Router();
 

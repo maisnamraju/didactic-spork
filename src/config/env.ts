@@ -4,7 +4,10 @@ import { z } from "zod";
 dotenv.config();
 
 const nodeEnvSchema = z.enum(["development", "test", "production"]);
-const smtpSecureSchema = z.enum(["true", "false"]).default("false").transform((value) => value === "true");
+const smtpSecureSchema = z
+  .enum(["true", "false"])
+  .default("false")
+  .transform((value) => value === "true");
 
 const rawEnvSchema = z
   .object({
@@ -18,8 +21,10 @@ const rawEnvSchema = z
       .default("replace-this-in-prod-with-32-plus-char-secret"),
     BETTER_AUTH_URL: z.string().url().optional(),
     BCRYPT_SALT_ROUNDS: z.coerce.number().int().min(8).max(15).default(12),
-    AI_PROVIDER: z.enum(["mock"]).default("mock"),
+    AI_PROVIDER: z.enum(["mock", "microservice"]).default("mock"),
     AI_MOCK_FAIL_KEY: z.string().default("__fail_ai__"),
+    AI_SERVICE_URL: z.string().url().default("http://localhost:8000"),
+    AI_SERVICE_TIMEOUT_MS: z.coerce.number().int().positive().default(15000),
     MAIL_TRANSPORT: z.enum(["smtp", "json"]).optional(),
     MAIL_FROM: z.string().email().default("no-reply@example.com"),
     MAIL_FROM_NAME: z.string().trim().min(1).max(120).default("TeraLeads"),
@@ -28,8 +33,15 @@ const rawEnvSchema = z
     SMTP_SECURE: smtpSecureSchema,
     SMTP_USER: z.string().optional(),
     SMTP_PASS: z.string().optional(),
+    CORS_ORIGINS: z.string().url().default("http://localhost:5173"),
   })
   .superRefine((value, ctx) => {
+    const effectiveMailTransport =
+      value.MAIL_TRANSPORT ?? (value.NODE_ENV === "test" ? "json" : "smtp");
+    if (effectiveMailTransport !== "smtp") {
+      return;
+    }
+
     const hasSmtpUser = Boolean(value.SMTP_USER);
     const hasSmtpPass = Boolean(value.SMTP_PASS);
     if (hasSmtpUser !== hasSmtpPass) {
@@ -44,7 +56,9 @@ const rawEnvSchema = z
 const parsed = rawEnvSchema.parse(process.env);
 
 const databaseUrl =
-  parsed.NODE_ENV === "test" && parsed.TEST_DATABASE_URL ? parsed.TEST_DATABASE_URL : parsed.DATABASE_URL;
+  parsed.NODE_ENV === "test" && parsed.TEST_DATABASE_URL
+    ? parsed.TEST_DATABASE_URL
+    : parsed.DATABASE_URL;
 const mailTransport = parsed.MAIL_TRANSPORT ?? (parsed.NODE_ENV === "test" ? "json" : "smtp");
 
 export const env = {

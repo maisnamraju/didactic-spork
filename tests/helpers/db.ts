@@ -1,5 +1,5 @@
-import { clearEmailVerificationTokens } from "../../src/lib/email-verification-token-store.js";
-import { prisma } from "../../src/lib/prisma.js";
+import { clearEmailVerificationTokens } from "../../src/lib/email-verification-token-store";
+import { prisma } from "../../src/lib/prisma";
 
 export function hasConfiguredTestDatabase(): boolean {
   return process.env.RUN_E2E === "true" && Boolean(process.env.TEST_DATABASE_URL);

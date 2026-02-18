@@ -1,6 +1,7 @@
 import type { RequestHandler } from "express";
-import { MailService } from "../services/mail.service.js";
-import { sendEmailBodySchema } from "../validators/mail.validator.js";
+
+import { MailService } from "../services/mail.service";
+import { sendEmailBodySchema } from "../validators/mail.validator";
 
 const mailService = new MailService();
 

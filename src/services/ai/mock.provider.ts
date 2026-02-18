@@ -1,5 +1,9 @@
-import { env } from "../../config/env.js";
-import type { AIProvider, GenerateAIResponseInput, GenerateAIResponseOutput } from "./provider.interface.js";
+import { env } from "../../config/env";
+import type {
+  AIProvider,
+  GenerateAIResponseInput,
+  GenerateAIResponseOutput,
+} from "./provider.interface";
 
 export class MockAIProvider implements AIProvider {
   public async generateResponse(input: GenerateAIResponseInput): Promise<GenerateAIResponseOutput> {

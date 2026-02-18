@@ -1,9 +1,10 @@
 import request from "supertest";
 import { beforeEach, describe, expect, it } from "vitest";
-import { consumeEmailVerificationToken } from "../../src/lib/email-verification-token-store.js";
-import { prisma } from "../../src/lib/prisma.js";
-import { hasConfiguredTestDatabase, resetDatabase } from "../helpers/db.js";
-import { createTestApp } from "../helpers/test-app.js";
+
+import { consumeEmailVerificationToken } from "../../src/lib/email-verification-token-store";
+import { prisma } from "../../src/lib/prisma";
+import { hasConfiguredTestDatabase, resetDatabase } from "../helpers/db";
+import { createTestApp } from "../helpers/test-app";
 
 const describeWithDb = hasConfiguredTestDatabase() ? describe : describe.skip;
 
@@ -75,9 +76,7 @@ describeWithDb("Auth e2e", () => {
       throw new Error("Expected verification token to be captured");
     }
 
-    const verify = await request(app)
-      .get("/api/auth/verify-email")
-      .query({ token });
+    const verify = await request(app).get("/api/auth/verify-email").query({ token });
 
     expect(verify.status).toBe(200);
     expect(verify.body.status).toBe(true);

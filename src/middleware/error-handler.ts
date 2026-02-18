@@ -1,6 +1,7 @@
 import type { ErrorRequestHandler } from "express";
 import { ZodError } from "zod";
-import { ApiError } from "../utils/api-error.js";
+
+import { ApiError } from "../utils/api-error";
 
 type PrismaLikeError = {
   code?: string;

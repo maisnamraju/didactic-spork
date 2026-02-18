@@ -1,7 +1,8 @@
 import { Router } from "express";
-import { chatRouter } from "./chat.routes.js";
-import { mailRouter } from "./mail.routes.js";
-import { patientRouter } from "./patient.routes.js";
+
+import { chatRouter } from "./chat.routes";
+import { mailRouter } from "./mail.routes";
+import { patientRouter } from "./patient.routes";
 
 export const apiRouter = Router();
 

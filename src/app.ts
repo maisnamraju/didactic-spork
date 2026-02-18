@@ -1,11 +1,12 @@
 import express from "express";
 import morgan from "morgan";
-import { env } from "./config/env.js";
-import { authHandler } from "./lib/better-auth.js";
-import { errorHandlerMiddleware } from "./middleware/error-handler.js";
-import { notFoundMiddleware } from "./middleware/not-found.js";
-import { requestIdMiddleware } from "./middleware/request-id.js";
-import { apiRouter } from "./routes/index.js";
+
+import { env } from "./config/env";
+import { authHandler } from "./lib/better-auth";
+import { errorHandlerMiddleware } from "./middleware/error-handler";
+import { notFoundMiddleware } from "./middleware/not-found";
+import { requestIdMiddleware } from "./middleware/request-id";
+import { apiRouter } from "./routes/index";
 
 export function createApp() {
   const app = express();

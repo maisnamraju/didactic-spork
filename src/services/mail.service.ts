@@ -1,6 +1,7 @@
 import nodemailer from "nodemailer";
-import { env } from "../config/env.js";
-import { ApiError } from "../utils/api-error.js";
+
+import { env } from "../config/env";
+import { ApiError } from "../utils/api-error";
 
 export interface SendEmailInput {
   to: string;
@@ -23,7 +24,10 @@ function mapAddressList(value: unknown): string[] {
   return value.map((item) => String(item));
 }
 
-function mapAcceptedRecipients(result: { accepted?: unknown; envelope?: { to?: unknown } }): string[] {
+function mapAcceptedRecipients(result: {
+  accepted?: unknown;
+  envelope?: { to?: unknown };
+}): string[] {
   const accepted = mapAddressList(result.accepted);
   if (accepted.length > 0) {
     return accepted;

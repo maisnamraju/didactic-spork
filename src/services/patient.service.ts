@@ -1,7 +1,7 @@
-import type { CursorPaginatedResult } from "../models/pagination.model.js";
-import type { PatientRecord } from "../models/patient.model.js";
-import { prisma } from "../lib/prisma.js";
-import { ApiError } from "../utils/api-error.js";
+import { prisma } from "../lib/prisma";
+import type { CursorPaginatedResult } from "../models/pagination.model";
+import type { PatientRecord } from "../models/patient.model";
+import { ApiError } from "../utils/api-error";
 
 export interface CreatePatientInput {
   name: string;
@@ -55,7 +55,10 @@ export class PatientService {
     return mapPatient(created);
   }
 
-  public async list(ownerUserId: string, pagination: CursorInput): Promise<CursorPaginatedResult<PatientRecord>> {
+  public async list(
+    ownerUserId: string,
+    pagination: CursorInput,
+  ): Promise<CursorPaginatedResult<PatientRecord>> {
     const rows = await prisma.patient.findMany({
       where: {
         ownerUserId,
@@ -79,7 +82,7 @@ export class PatientService {
 
     return {
       data: sliced.map(mapPatient),
-      next_cursor: hasMore ? sliced[sliced.length - 1]?.id ?? null : null,
+      next_cursor: hasMore ? (sliced[sliced.length - 1]?.id ?? null) : null,
     };
   }
 
@@ -99,7 +102,11 @@ export class PatientService {
     return mapPatient(patient);
   }
 
-  public async update(ownerUserId: string, id: number, input: UpdatePatientInput): Promise<PatientRecord> {
+  public async update(
+    ownerUserId: string,
+    id: number,
+    input: UpdatePatientInput,
+  ): Promise<PatientRecord> {
     await this.getById(ownerUserId, id);
 
     const updated = await prisma.patient.update({

@@ -1,13 +1,14 @@
 import type { RequestHandler } from "express";
-import { getAuthContext } from "../middleware/require-auth.js";
-import { PatientService } from "../services/patient.service.js";
-import { mapPatientToResponse } from "../utils/mapper.js";
+
+import { getAuthContext } from "../middleware/require-auth";
+import { PatientService } from "../services/patient.service";
+import { mapPatientToResponse } from "../utils/mapper";
 import {
   createPatientBodySchema,
   listPatientsQuerySchema,
   patientIdParamSchema,
   updatePatientBodySchema,
-} from "../validators/patient.validator.js";
+} from "../validators/patient.validator";
 
 const patientService = new PatientService();
 

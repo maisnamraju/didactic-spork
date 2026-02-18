@@ -6,7 +6,11 @@ const recipientSchema = z
   .email("to must be a valid email")
   .transform((value) => value.toLowerCase());
 
-const subjectSchema = z.string().trim().min(1, "subject is required").max(200, "subject is too long");
+const subjectSchema = z
+  .string()
+  .trim()
+  .min(1, "subject is required")
+  .max(200, "subject is too long");
 
 const textSchema = z.string().trim().min(1, "text cannot be empty").max(10000, "text is too long");
 

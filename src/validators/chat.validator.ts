@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { cursorPaginationQuerySchema, idParamSchema } from "./common.validator.js";
+
+import { cursorPaginationQuerySchema, idParamSchema } from "./common.validator";
 
 export const createChatBodySchema = z.object({
   patient_id: z.number().int().positive(),

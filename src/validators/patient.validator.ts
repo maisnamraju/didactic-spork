@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { cursorPaginationQuerySchema, idParamSchema } from "./common.validator.js";
+
+import { cursorPaginationQuerySchema, idParamSchema } from "./common.validator";
 
 function isValidDateString(value: string): boolean {
   const parsed = new Date(`${value}T00:00:00.000Z`);

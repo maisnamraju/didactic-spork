@@ -3,6 +3,7 @@
 Express + Better Auth + Prisma + PostgreSQL backend with:
 - Better Auth native endpoints (`/api/auth/*`) using `bearer` + `jwt` plugins
 - Owner-scoped patient CRUD and chat APIs
+- Configurable AI providers (`mock` or external microservice)
 - Cursor pagination
 - Soft-delete patients
 - E2E tests with Vitest + Supertest
@@ -11,6 +12,7 @@ Express + Better Auth + Prisma + PostgreSQL backend with:
 
 - Node.js 20+
 - PostgreSQL
+- Python 3.11+ (only if running the optional AI microservice)
 
 ## Setup
 
@@ -39,6 +41,49 @@ npm run prisma:migrate
 ```bash
 npm run dev
 ```
+
+## Frontend Dashboard
+
+The React frontend lives in `frontend/` and uses:
+- Vite + React + TypeScript
+- TanStack Router + TanStack Query
+- shadcn/ui
+- `@assistant-ui/react` modal primitives for patient chat
+
+Run it locally (in a separate terminal while backend is running):
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+By default, the frontend dev server proxies `/api`, `/patients`, and `/chat` to `http://localhost:3000`.
+
+Auth is cookie/session-based and all frontend API requests use `credentials: include`.
+
+## AI Microservice (Optional)
+
+The chat API can call a FastAPI AI sidecar via:
+- `AI_PROVIDER=microservice`
+- `AI_SERVICE_URL=http://localhost:8000`
+
+The sidecar lives in `ai-service/` and exposes:
+- `POST /generate`
+- `GET /health`
+
+Start it with:
+
+```bash
+pip install -r ai-service/requirements.txt
+cp ai-service/.env.example ai-service/.env
+uvicorn main:app --app-dir ai-service/app --host 0.0.0.0 --port 8000 --env-file ai-service/.env --reload
+```
+
+To use OpenRouter in the sidecar, set:
+- `AI_MODE=openrouter`
+- `OPENROUTER_API_KEY=<your key>`
+- `OPENROUTER_MODEL=<model id>`
 
 ## Test
 
