@@ -1,5 +1,5 @@
 import { useNavigate, useParams } from "@tanstack/react-router";
-import { ArrowLeft, MessageSquare } from "lucide-react";
+import { ArrowLeft, Loader2, MessageSquare, SendHorizontal } from "lucide-react";
 import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -9,6 +9,7 @@ import type { ChatMessage } from "@/lib/types/api";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
 export function ChatPage() {
@@ -214,6 +215,54 @@ export function ChatPage() {
           ))}
         </div>
       </main>
+
+      <Separator />
+
+      <footer className="border-t bg-background">
+        <div className="mx-auto max-w-3xl space-y-3 p-4">
+          {inlineError ? (
+            <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+              {inlineError}
+            </div>
+          ) : null}
+
+          <div className="flex gap-2">
+            <Textarea
+              value={draft}
+              onChange={(event) => setDraft(event.target.value)}
+              placeholder="Ask about this patient's care context..."
+              rows={3}
+              disabled={sendMutation.isPending}
+              className="resize-none"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSend();
+                }
+              }}
+            />
+            <Button
+              type="button"
+              onClick={handleSend}
+              disabled={sendMutation.isPending || draft.trim().length === 0}
+              className="self-end"
+            >
+              {sendMutation.isPending ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <SendHorizontal className="size-4" />
+              )}
+            </Button>
+          </div>
+
+          {sendMutation.isPending ? (
+            <div className="flex items-center gap-2 text-muted-foreground text-xs">
+              <Loader2 className="size-3 animate-spin" />
+              Waiting for AI response...
+            </div>
+          ) : null}
+        </div>
+      </footer>
     </div>
   );
 }
