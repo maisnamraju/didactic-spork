@@ -1,7 +1,7 @@
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { ArrowLeft, MessageSquare } from "lucide-react";
 import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { createChat, listPatientChats } from "@/lib/api/chat";
 import { getErrorMessage } from "@/lib/errors";
@@ -9,6 +9,7 @@ import type { ChatMessage } from "@/lib/types/api";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
 
 export function ChatPage() {
   const { patientId } = useParams({ from: "/chat/$patientId" });
@@ -115,6 +116,14 @@ export function ChatPage() {
     });
   };
 
+  // Auto-scroll to bottom on new messages
+  useEffect(() => {
+    if (!viewportRef.current) {
+      return;
+    }
+    viewportRef.current.scrollTop = viewportRef.current.scrollHeight;
+  }, [mergedMessages.length, historyQuery.hasNextPage, historyQuery.isFetchingNextPage]);
+
   const handleBack = () => {
     navigate({ to: "/dashboard" });
   };
@@ -142,9 +151,67 @@ export function ChatPage() {
         </div>
       </header>
       <Separator />
-      <main className="flex-1 overflow-y-auto">
-        <div className="mx-auto max-w-3xl p-4">
-          <p className="text-muted-foreground">Chat interface coming soon...</p>
+      <main ref={viewportRef} className="flex-1 overflow-y-auto">
+        <div className="mx-auto max-w-3xl space-y-3 p-4">
+          {historyQuery.isPending ? (
+            <div className="space-y-3">
+              <div className="h-12 w-[70%] animate-pulse rounded-xl bg-muted" />
+              <div className="ml-auto h-12 w-[62%] animate-pulse rounded-xl bg-muted" />
+              <div className="h-12 w-[58%] animate-pulse rounded-xl bg-muted" />
+            </div>
+          ) : null}
+
+          {historyQuery.isError ? (
+            <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+              {getErrorMessage(historyQuery.error, "Unable to load chat history.")}
+            </div>
+          ) : null}
+
+          {!historyQuery.isPending && !historyQuery.isError && historyQuery.hasNextPage ? (
+            <div className="flex justify-center">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => void historyQuery.fetchNextPage()}
+                disabled={historyQuery.isFetchingNextPage}
+              >
+                {historyQuery.isFetchingNextPage ? "Loading..." : "Load more messages"}
+              </Button>
+            </div>
+          ) : null}
+
+          {!historyQuery.isPending &&
+          !historyQuery.isError &&
+          mergedMessages.length === 0 ? (
+            <p className="py-10 text-center text-muted-foreground text-sm">
+              No messages yet. Start the conversation.
+            </p>
+          ) : null}
+
+          {mergedMessages.map((message) => (
+            <article
+              key={`${message.id}-${message.createdAt}`}
+              className={cn(
+                "max-w-[85%] rounded-2xl px-4 py-3 text-sm",
+                message.role === "assistant"
+                  ? "mr-auto bg-muted text-foreground"
+                  : "ml-auto bg-primary text-primary-foreground",
+              )}
+            >
+              <p className="whitespace-pre-wrap">{message.message}</p>
+              <p
+                className={cn(
+                  "mt-2 text-[11px]",
+                  message.role === "assistant"
+                    ? "text-muted-foreground"
+                    : "text-primary-foreground/80",
+                )}
+              >
+                {new Date(message.createdAt).toLocaleString()}
+              </p>
+            </article>
+          ))}
         </div>
       </main>
     </div>
