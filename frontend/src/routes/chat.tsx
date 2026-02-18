@@ -1,5 +1,11 @@
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { ArrowLeft, MessageSquare } from "lucide-react";
+import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
+import { createChat, listPatientChats } from "@/lib/api/chat";
+import { getErrorMessage } from "@/lib/errors";
+import type { ChatMessage } from "@/lib/types/api";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -7,6 +13,58 @@ import { Separator } from "@/components/ui/separator";
 export function ChatPage() {
   const { patientId } = useParams({ from: "/chat/$patientId" });
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  // State
+  const [draft, setDraft] = useState("");
+  const [inlineError, setInlineError] = useState<string | null>(null);
+  const [localMessages, setLocalMessages] = useState<ChatMessage[]>([]);
+  const nextTempIdRef = useRef(-1);
+  const viewportRef = useRef<HTMLDivElement | null>(null);
+
+  const patientIdNum = Number(patientId);
+
+  // Fetch chat history
+  const historyQuery = useInfiniteQuery({
+    queryKey: ["patient-chat-history", patientIdNum],
+    queryFn: ({ pageParam }) =>
+      listPatientChats({
+        patientId: patientIdNum,
+        limit: 20,
+        cursor: pageParam,
+      }),
+    initialPageParam: null as number | null,
+    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+  });
+
+  // Remote messages from API
+  const remoteMessages = useMemo(
+    () => historyQuery.data?.pages.flatMap((page) => page.data) ?? [],
+    [historyQuery.data],
+  );
+
+  // Merge remote and local messages
+  const mergedMessages = useMemo(() => {
+    const seenIds = new Set<number>();
+    const combined = [...remoteMessages, ...localMessages];
+    const unique: ChatMessage[] = [];
+
+    for (const message of combined) {
+      if (message.id > 0) {
+        if (seenIds.has(message.id)) {
+          continue;
+        }
+        seenIds.add(message.id);
+      }
+      unique.push(message);
+    }
+
+    return unique.sort((left, right) => {
+      return (
+        new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime()
+      );
+    });
+  }, [localMessages, remoteMessages]);
 
   const handleBack = () => {
     navigate({ to: "/dashboard" });
