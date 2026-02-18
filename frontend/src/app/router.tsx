@@ -7,6 +7,7 @@ import {
   redirect,
 } from "@tanstack/react-router";
 import { sessionQueryOptions } from "@/lib/queries/auth";
+import { ChatPage } from "@/routes/chat";
 import { DashboardPage } from "@/routes/dashboard";
 import { SignInPage } from "@/routes/sign-in";
 import { SignUpPage } from "@/routes/sign-up";
@@ -71,11 +72,24 @@ const dashboardRoute = createRoute({
   component: DashboardPage,
 });
 
+const chatRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/chat/$patientId",
+  beforeLoad: async ({ context }) => {
+    const session = await context.queryClient.ensureQueryData(sessionQueryOptions);
+    if (!session) {
+      throw redirect({ to: "/sign-in" });
+    }
+  },
+  component: ChatPage,
+});
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   signInRoute,
   signUpRoute,
   dashboardRoute,
+  chatRoute,
 ]);
 
 export function createAppRouter(queryClient: QueryClient) {
