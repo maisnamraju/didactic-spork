@@ -66,6 +66,55 @@ export function ChatPage() {
     });
   }, [localMessages, remoteMessages]);
 
+  // Send message mutation
+  const sendMutation = useMutation({
+    mutationFn: createChat,
+    onSuccess: (reply, variables) => {
+      const userMessage: ChatMessage = {
+        id: nextTempIdRef.current--,
+        patientId: patientIdNum,
+        role: "user",
+        message: variables.message,
+        provider: "mock",
+        createdAt: new Date().toISOString(),
+      };
+
+      const assistantMessage: ChatMessage = {
+        id: reply.messageId,
+        patientId: patientIdNum,
+        role: "assistant",
+        message: reply.aiResponse,
+        provider: reply.provider,
+        createdAt: new Date().toISOString(),
+      };
+
+      setLocalMessages((previous) => [...previous, userMessage, assistantMessage]);
+      setDraft("");
+      setInlineError(null);
+      void queryClient.invalidateQueries({
+        queryKey: ["patient-chat-history", patientIdNum],
+      });
+    },
+    onError: (error) => {
+      const message = getErrorMessage(error);
+      setInlineError(message);
+      toast.error(message);
+    },
+  });
+
+  const handleSend = () => {
+    const message = draft.trim();
+    if (!message || sendMutation.isPending) {
+      return;
+    }
+
+    setInlineError(null);
+    sendMutation.mutate({
+      patientId: patientIdNum,
+      message,
+    });
+  };
+
   const handleBack = () => {
     navigate({ to: "/dashboard" });
   };
