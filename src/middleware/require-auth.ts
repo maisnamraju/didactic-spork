@@ -7,12 +7,20 @@ import { ApiError } from "../utils/api-error";
 
 export const requireAuth: RequestHandler = async (req, _res, next) => {
   try {
+    // Extract token from Authorization header
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      throw new ApiError(401, "UNAUTHORIZED", "Authorization header required");
+    }
+
+    // Use getSession with Authorization header - bearer plugin handles JWT validation
     const session = await auth.api.getSession({
       headers: fromNodeHeaders(req.headers),
     });
 
     if (!session || !session.user) {
-      throw new ApiError(401, "UNAUTHORIZED", "Authentication required");
+      throw new ApiError(401, "UNAUTHORIZED", "Invalid or expired token");
     }
 
     const rawPublicId =
