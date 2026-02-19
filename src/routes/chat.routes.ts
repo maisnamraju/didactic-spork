@@ -8,3 +8,4 @@ export const chatRouter = Router();
 
 chatRouter.post("/chat", requireAuth, asyncHandler(createChatController));
 chatRouter.get("/patients/:id/chats", requireAuth, asyncHandler(listPatientChatsController));
+2

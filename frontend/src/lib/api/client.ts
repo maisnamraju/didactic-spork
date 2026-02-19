@@ -2,10 +2,8 @@ import type { ApiErrorPayload } from "@/lib/types/api";
 import { tokenStore } from "../auth/token-store";
 
 type UnauthorizedHandler = (error: ApiClientError) => void;
-type TokenRefreshHandler = () => Promise<boolean>;
 
 let unauthorizedHandler: UnauthorizedHandler | null = null;
-let tokenRefreshHandler: TokenRefreshHandler | null = null;
 let refreshPromise: Promise<boolean> | null = null;
 
 export class ApiClientError extends Error {
@@ -35,32 +33,6 @@ export function setUnauthorizedHandler(handler: UnauthorizedHandler): () => void
       unauthorizedHandler = null;
     }
   };
-}
-
-export function setTokenRefreshHandler(handler: TokenRefreshHandler): () => void {
-  tokenRefreshHandler = handler;
-
-  return () => {
-    if (tokenRefreshHandler === handler) {
-      tokenRefreshHandler = null;
-    }
-  };
-}
-
-async function attemptTokenRefresh(): Promise<boolean> {
-  if (!tokenRefreshHandler) {
-    return false;
-  }
-
-  if (refreshPromise) {
-    return refreshPromise;
-  }
-
-  refreshPromise = tokenRefreshHandler().finally(() => {
-    refreshPromise = null;
-  });
-
-  return refreshPromise;
 }
 
 export function isApiClientError(error: unknown): error is ApiClientError {
@@ -108,6 +80,38 @@ function toApiClientError(status: number, payload: unknown): ApiClientError {
   });
 }
 
+async function attemptTokenRefresh(): Promise<boolean> {
+  if (refreshPromise) {
+    return refreshPromise;
+  }
+
+  refreshPromise = (async () => {
+    try {
+      const res = await fetch("/api/auth/token", {
+        method: "POST",
+        credentials: "include",
+      });
+
+      if (!res.ok) return false;
+
+      const body = await res.json();
+      const accessToken = body.token || body.accessToken;
+      const expiresIn = body.expiresIn || 900;
+
+      if (!accessToken) return false;
+
+      tokenStore.setTokens({ accessToken, expiresIn });
+      return true;
+    } catch {
+      return false;
+    }
+  })().finally(() => {
+    refreshPromise = null;
+  });
+
+  return refreshPromise;
+}
+
 export async function apiRequest<T>(
   path: string,
   init?: RequestInit,
@@ -123,7 +127,6 @@ export async function apiRequest<T>(
     headers.set("content-type", "application/json");
   }
 
-  // Inject Authorization header if token exists
   const token = tokenStore.getAccessToken();
   if (token && !headers.has("authorization")) {
     headers.set("authorization", `Bearer ${token}`);
@@ -136,10 +139,8 @@ export async function apiRequest<T>(
   });
 
   if (response.status === 401) {
-    // Attempt token refresh before failing
     const refreshed = await attemptTokenRefresh();
     if (refreshed) {
-      // Retry with new token
       const newToken = tokenStore.getAccessToken();
       if (newToken) {
         headers.set("authorization", `Bearer ${newToken}`);
@@ -164,7 +165,6 @@ export async function apiRequest<T>(
       return retryPayload as T;
     }
 
-    // Refresh failed or not available
     const payload = await parseJson(response);
     const error = toApiClientError(response.status, payload);
     unauthorizedHandler?.(error);

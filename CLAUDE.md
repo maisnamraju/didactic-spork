@@ -1,0 +1,1 @@
+- when making a commit, do not add the Co-Authored By in the message

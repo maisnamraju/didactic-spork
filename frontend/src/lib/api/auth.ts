@@ -1,4 +1,4 @@
-import { apiRequest, isApiClientError, setTokenRefreshHandler } from "@/lib/api/client";
+import { apiRequest, isApiClientError } from "@/lib/api/client";
 import { tokenStore } from "../auth/token-store";
 
 export interface SignInInput {
@@ -97,27 +97,6 @@ export async function signOut(): Promise<void> {
   }
 }
 
-export async function refreshAccessToken(): Promise<boolean> {
-  try {
-    const response = await apiRequest<AuthResponse>("/api/auth/token", {
-      method: "POST",
-    });
-
-    const accessToken = response.token || response.accessToken;
-    const expiresIn = response.expiresIn || 900;
-
-    if (!accessToken) {
-      return false;
-    }
-
-    tokenStore.setTokens({ accessToken, expiresIn });
-    return true;
-  } catch {
-    tokenStore.clearTokens();
-    return false;
-  }
-}
-
 export async function getSession(): Promise<AuthSession | null> {
   try {
     const token = tokenStore.getAccessToken();
@@ -136,6 +115,3 @@ export async function getSession(): Promise<AuthSession | null> {
     throw error;
   }
 }
-
-// Register token refresh handler with the API client
-setTokenRefreshHandler(refreshAccessToken);
