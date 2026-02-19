@@ -1,4 +1,5 @@
 import { apiRequest, isApiClientError } from "@/lib/api/client";
+import { tokenStore } from "../auth/token-store";
 
 export interface SignInInput {
   email: string;
@@ -20,6 +21,12 @@ interface SessionDto {
   session?: {
     expiresAt?: string | null;
   } | null;
+}
+
+interface TokenResponse {
+  token?: string;
+  accessToken?: string;
+  expiresIn?: number;
 }
 
 export interface AuthSession {
@@ -51,11 +58,30 @@ function mapSession(session: SessionDto | null): AuthSession | null {
   };
 }
 
+async function fetchAndStoreToken(): Promise<void> {
+  try {
+    const response = await apiRequest<TokenResponse>("/api/auth/token", {
+      method: "POST",
+    });
+
+    const accessToken = response.token || response.accessToken;
+    const expiresIn = response.expiresIn || 900;
+
+    if (accessToken && expiresIn > 0) {
+      tokenStore.setTokens({ accessToken, expiresIn });
+    }
+  } catch {
+    // Token fetch failed — protected routes won't work but session routes still use cookies
+  }
+}
+
 export async function signIn(input: SignInInput): Promise<void> {
   await apiRequest<unknown>("/api/auth/sign-in/email", {
     method: "POST",
     body: JSON.stringify(input),
   });
+
+  await fetchAndStoreToken();
 }
 
 export async function signUp(input: SignUpInput): Promise<void> {
@@ -63,26 +89,27 @@ export async function signUp(input: SignUpInput): Promise<void> {
     method: "POST",
     body: JSON.stringify(input),
   });
+
+  await fetchAndStoreToken();
 }
 
 export async function signOut(): Promise<void> {
-  await apiRequest<unknown>("/api/auth/sign-out", {
-    method: "POST",
-  });
+  try {
+    await apiRequest<unknown>("/api/auth/sign-out", {
+      method: "POST",
+    });
+  } finally {
+    tokenStore.clearTokens();
+  }
 }
 
 export async function getSession(): Promise<AuthSession | null> {
   try {
-    console.log("[Auth] Fetching session from API");
     const response = await apiRequest<SessionDto>("/api/auth/get-session");
-    console.log("[Auth] Raw session response:", response);
-    const mapped = mapSession(response);
-    console.log("[Auth] Mapped session:", mapped);
-    return mapped;
+    return mapSession(response);
   } catch (error) {
-    console.error("[Auth] Error fetching session:", error);
     if (isApiClientError(error) && error.status === 401) {
-      console.log("[Auth] 401 error, returning null");
+      tokenStore.clearTokens();
       return null;
     }
 

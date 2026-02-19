@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { useMutation } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -17,7 +17,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { signUp } from "@/lib/api/auth";
 import { getErrorMessage } from "@/lib/errors";
-import { sessionQueryKey } from "@/lib/queries/auth";
 
 const signUpSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(120, "Name is too long"),
@@ -28,9 +27,8 @@ const signUpSchema = z.object({
 type SignUpFormValues = z.infer<typeof signUpSchema>;
 
 export function SignUpPage() {
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const [serverError, setServerError] = useState<string | null>(null);
+  const [registeredEmail, setRegisteredEmail] = useState<string | null>(null);
 
   const form = useForm<SignUpFormValues>({
     resolver: zodResolver(signUpSchema),
@@ -43,10 +41,9 @@ export function SignUpPage() {
 
   const signUpMutation = useMutation({
     mutationFn: signUp,
-    onSuccess: async () => {
+    onSuccess: (_data, variables) => {
       setServerError(null);
-      await queryClient.invalidateQueries({ queryKey: sessionQueryKey });
-      await navigate({ to: "/dashboard" });
+      setRegisteredEmail(variables.email);
     },
     onError: (error) => {
       setServerError(getErrorMessage(error));
@@ -57,6 +54,30 @@ export function SignUpPage() {
     setServerError(null);
     await signUpMutation.mutateAsync(values);
   });
+
+  if (registeredEmail) {
+    return (
+      <main className="flex min-h-[80vh] items-center justify-center">
+        <Card className="w-full max-w-md border-border/70 bg-card/95 shadow-lg backdrop-blur">
+          <CardHeader>
+            <CardTitle>Check your email</CardTitle>
+            <CardDescription>
+              We sent a verification link to <strong>{registeredEmail}</strong>. Please check your
+              inbox and click the link to activate your account.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-center text-muted-foreground text-sm">
+              Already verified?{" "}
+              <Link to="/sign-in" className="font-medium text-primary underline-offset-4 hover:underline">
+                Sign in
+              </Link>
+            </p>
+          </CardContent>
+        </Card>
+      </main>
+    );
+  }
 
   return (
     <main className="flex min-h-[80vh] items-center justify-center">

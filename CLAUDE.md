@@ -1,0 +1,2 @@
+- when making a commit, do not add the Co-Authored By in the message
+- when a code is changed, ensure that the tests are being checked

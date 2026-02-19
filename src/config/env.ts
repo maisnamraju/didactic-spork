@@ -19,20 +19,21 @@ const rawEnvSchema = z
       .string()
       .min(32, "BETTER_AUTH_SECRET must be at least 32 characters")
       .default("replace-this-in-prod-with-32-plus-char-secret"),
-    BETTER_AUTH_URL: z.string().url().optional(),
+    BETTER_AUTH_URL: z.url().optional(),
     BCRYPT_SALT_ROUNDS: z.coerce.number().int().min(8).max(15).default(12),
     AI_PROVIDER: z.enum(["mock", "microservice"]).default("mock"),
     AI_MOCK_FAIL_KEY: z.string().default("__fail_ai__"),
     AI_SERVICE_URL: z.string().url().default("http://localhost:8000"),
     AI_SERVICE_TIMEOUT_MS: z.coerce.number().int().positive().default(15000),
     MAIL_TRANSPORT: z.enum(["smtp", "json"]).optional(),
-    MAIL_FROM: z.string().email().default("no-reply@example.com"),
+    MAIL_FROM: z.email().default("no-reply@example.com"),
     MAIL_FROM_NAME: z.string().trim().min(1).max(120).default("TeraLeads"),
     SMTP_HOST: z.string().default("localhost"),
     SMTP_PORT: z.coerce.number().int().positive().default(587),
     SMTP_SECURE: smtpSecureSchema,
     SMTP_USER: z.string().optional(),
     SMTP_PASS: z.string().optional(),
+    LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"]).default("info"),
     CORS_ORIGINS: z.string().url().default("http://localhost:5173"),
   })
   .superRefine((value, ctx) => {

@@ -44,20 +44,25 @@ async function signInWithEmail(app: Express, email: string, password: string) {
 }
 
 export async function verifyEmailForUser(app: Express, email: string): Promise<void> {
-  const sendVerificationResponse = await request(app)
-    .post("/api/auth/send-verification-email")
-    .set("origin", env.BETTER_AUTH_URL)
-    .send({
-      email,
-    });
+  // Try consuming a token already captured on sign-up (sendOnSignUp: true)
+  let token = consumeEmailVerificationToken(email);
 
-  if (sendVerificationResponse.status !== 200) {
-    throw new Error(
-      `Send verification email failed with status ${sendVerificationResponse.status}`,
-    );
+  if (!token) {
+    const sendVerificationResponse = await request(app)
+      .post("/api/auth/send-verification-email")
+      .set("origin", env.BETTER_AUTH_URL)
+      .send({
+        email,
+      });
+
+    if (sendVerificationResponse.status !== 200) {
+      throw new Error(
+        `Send verification email failed with status ${sendVerificationResponse.status}`,
+      );
+    }
+
+    token = consumeEmailVerificationToken(email);
   }
-
-  const token = consumeEmailVerificationToken(email);
 
   if (!token) {
     throw new Error("Expected a captured verification token but none was available");
