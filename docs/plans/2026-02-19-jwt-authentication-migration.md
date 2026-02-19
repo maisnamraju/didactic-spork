@@ -144,27 +144,31 @@ export const requireAuth: RequestHandler = async (req, _res, next) => {
 
     const token = authHeader.substring(7); // Remove "Bearer " prefix
 
-    // Verify JWT token
-    const verified = await auth.api.verifyJWT({
-      token,
+    // Verify JWT token using getSession
+    // NOTE: We use auth.api.getSession() with the bearer plugin, which:
+    // 1. Automatically extracts and validates the JWT from the Authorization header
+    // 2. Returns the full session with user details
+    // 3. Leverages the bearer plugin's hook to convert JWT to session
+    const session = await auth.api.getSession({
+      headers: fromNodeHeaders(req.headers),
     });
 
-    if (!verified || !verified.user) {
+    if (!session || !session.user) {
       throw new ApiError(401, "UNAUTHORIZED", "Invalid or expired token");
     }
 
     const rawPublicId =
-      Reflect.get(verified.user as Record<string, unknown>, "publicId") ??
-      Reflect.get(verified.user as Record<string, unknown>, "public_id") ??
+      Reflect.get(session.user as Record<string, unknown>, "publicId") ??
+      Reflect.get(session.user as Record<string, unknown>, "public_id") ??
       null;
 
     const publicId = typeof rawPublicId === "number" ? rawPublicId : null;
 
     const authContext: AuthContext = {
       user: {
-        id: verified.user.id,
-        email: verified.user.email,
-        name: verified.user.name,
+        id: session.user.id,
+        email: session.user.email,
+        name: session.user.name,
         public_id: publicId,
       },
     };
@@ -836,9 +840,12 @@ app.get("/api/protected", requireAuth, (req, res) => {
 
 ```typescript
 import { auth } from "./lib/better-auth";
+import { fromNodeHeaders } from "better-auth/node";
 
-const verified = await auth.api.verifyJWT({ token });
-if (verified?.user) {
+const session = await auth.api.getSession({
+  headers: fromNodeHeaders(req.headers),
+});
+if (session?.user) {
   // Token is valid
 }
 ```
