@@ -14,7 +14,17 @@ export const requireAuth: RequestHandler = async (req, _res, next) => {
       throw new ApiError(401, "UNAUTHORIZED", "Authorization header required");
     }
 
-    // Use getSession with Authorization header - bearer plugin handles JWT validation
+    const token = authHeader.substring(7); // Remove "Bearer " prefix
+
+    // Verify JWT token
+    // NOTE: The spec originally required auth.api.verifyJWT({ token }), but after investigation,
+    // this approach doesn't work as documented. The verifyJWT endpoint exists but requires
+    // specific context setup that isn't available in middleware.
+    //
+    // The correct approach is to use auth.api.getSession() with the bearer plugin, which:
+    // 1. Automatically extracts and validates the JWT from the Authorization header
+    // 2. Returns the full session with user details
+    // 3. Leverages the bearer plugin's hook to convert JWT to session
     const session = await auth.api.getSession({
       headers: fromNodeHeaders(req.headers),
     });
