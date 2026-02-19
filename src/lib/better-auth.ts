@@ -57,7 +57,17 @@ export const auth = betterAuth({
       generateId: "uuid",
     },
   },
-  plugins: [bearer(), jwt()],
+  session: {
+    expiresIn: 60 * 60 * 24 * 7, // 7 days for refresh tokens
+  },
+  plugins: [
+    bearer(),
+    jwt({
+      jwt: {
+        expirationTime: 60 * 15, // 15 minutes for access tokens
+      },
+    }),
+  ],
 });
 
 export const authHandler = toNodeHandler(auth);
