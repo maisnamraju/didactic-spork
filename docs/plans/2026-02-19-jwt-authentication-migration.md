@@ -17,14 +17,18 @@
 
 **Step 1: Update better-auth JWT plugin configuration**
 
-In `src/lib/better-auth.ts`, update the plugins array to configure JWT expiry times:
+In `src/lib/better-auth.ts`, update the session configuration and plugins array to configure JWT expiry times:
 
 ```typescript
+session: {
+  expiresIn: 60 * 60 * 24 * 7, // 7 days for refresh tokens
+},
 plugins: [
   bearer(),
   jwt({
-    expiresIn: 60 * 15, // 15 minutes for access tokens
-    refreshExpiresIn: 60 * 60 * 24 * 7, // 7 days for refresh tokens
+    jwt: {
+      expirationTime: 60 * 15, // 15 minutes for access tokens
+    },
   }),
 ],
 ```
