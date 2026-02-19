@@ -1,8 +1,12 @@
 import type { ApiErrorPayload } from "@/lib/types/api";
+import { tokenStore } from "../auth/token-store";
 
 type UnauthorizedHandler = (error: ApiClientError) => void;
+type TokenRefreshHandler = () => Promise<boolean>;
 
 let unauthorizedHandler: UnauthorizedHandler | null = null;
+let tokenRefreshHandler: TokenRefreshHandler | null = null;
+let refreshPromise: Promise<boolean> | null = null;
 
 export class ApiClientError extends Error {
   public readonly status: number;
@@ -31,6 +35,32 @@ export function setUnauthorizedHandler(handler: UnauthorizedHandler): () => void
       unauthorizedHandler = null;
     }
   };
+}
+
+export function setTokenRefreshHandler(handler: TokenRefreshHandler): () => void {
+  tokenRefreshHandler = handler;
+
+  return () => {
+    if (tokenRefreshHandler === handler) {
+      tokenRefreshHandler = null;
+    }
+  };
+}
+
+async function attemptTokenRefresh(): Promise<boolean> {
+  if (!tokenRefreshHandler) {
+    return false;
+  }
+
+  if (refreshPromise) {
+    return refreshPromise;
+  }
+
+  refreshPromise = tokenRefreshHandler().finally(() => {
+    refreshPromise = null;
+  });
+
+  return refreshPromise;
 }
 
 export function isApiClientError(error: unknown): error is ApiClientError {
@@ -93,22 +123,58 @@ export async function apiRequest<T>(
     headers.set("content-type", "application/json");
   }
 
+  // Inject Authorization header if token exists
+  const token = tokenStore.getAccessToken();
+  if (token && !headers.has("authorization")) {
+    headers.set("authorization", `Bearer ${token}`);
+  }
+
   const response = await fetch(path, {
     ...init,
     headers,
     credentials: "include",
   });
 
+  if (response.status === 401) {
+    // Attempt token refresh before failing
+    const refreshed = await attemptTokenRefresh();
+    if (refreshed) {
+      // Retry with new token
+      const newToken = tokenStore.getAccessToken();
+      if (newToken) {
+        headers.set("authorization", `Bearer ${newToken}`);
+      }
+
+      const retryResponse = await fetch(path, {
+        ...init,
+        headers,
+        credentials: "include",
+      });
+
+      const retryPayload = await parseJson(retryResponse);
+
+      if (!retryResponse.ok) {
+        const error = toApiClientError(retryResponse.status, retryPayload);
+        if (retryResponse.status === 401) {
+          unauthorizedHandler?.(error);
+        }
+        throw error;
+      }
+
+      return retryPayload as T;
+    }
+
+    // Refresh failed or not available
+    const payload = await parseJson(response);
+    const error = toApiClientError(response.status, payload);
+    unauthorizedHandler?.(error);
+    throw error;
+  }
+
   const payload = await parseJson(response);
 
   if (!response.ok) {
-    const error = toApiClientError(response.status, payload);
-
-    if (response.status === 401) {
-      unauthorizedHandler?.(error);
-    }
-
-    throw error;
+    throw toApiClientError(response.status, payload);
   }
 
   return payload as T;

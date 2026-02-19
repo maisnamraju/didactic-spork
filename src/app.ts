@@ -1,5 +1,6 @@
 import express from "express";
 import morgan from "morgan";
+import helmet from "helmet";
 
 import { env } from "./config/env";
 import { authHandler } from "./lib/better-auth";
@@ -12,6 +13,7 @@ export function createApp() {
   const app = express();
 
   app.set("trust proxy", true);
+  app.use(helmet());
 
   app.all(/^\/api\/auth(\/.*)?$/, authHandler);
 

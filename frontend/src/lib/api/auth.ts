@@ -1,4 +1,5 @@
-import { apiRequest, isApiClientError } from "@/lib/api/client";
+import { apiRequest, isApiClientError, setTokenRefreshHandler } from "@/lib/api/client";
+import { tokenStore } from "../auth/token-store";
 
 export interface SignInInput {
   email: string;
@@ -20,6 +21,14 @@ interface SessionDto {
   session?: {
     expiresAt?: string | null;
   } | null;
+}
+
+interface AuthResponse {
+  token?: string;
+  accessToken?: string;
+  expiresIn?: number;
+  user?: SessionDto["user"];
+  session?: SessionDto["session"];
 }
 
 export interface AuthSession {
@@ -51,41 +60,82 @@ function mapSession(session: SessionDto | null): AuthSession | null {
   };
 }
 
+function storeTokenFromResponse(response: AuthResponse): void {
+  const accessToken = response.token || response.accessToken;
+  const expiresIn = response.expiresIn || 900; // Default 15 minutes
+
+  if (accessToken && expiresIn > 0) {
+    tokenStore.setTokens({ accessToken, expiresIn });
+  }
+}
+
 export async function signIn(input: SignInInput): Promise<void> {
-  await apiRequest<unknown>("/api/auth/sign-in/email", {
+  const response = await apiRequest<AuthResponse>("/api/auth/sign-in/email", {
     method: "POST",
     body: JSON.stringify(input),
   });
+
+  storeTokenFromResponse(response);
 }
 
 export async function signUp(input: SignUpInput): Promise<void> {
-  await apiRequest<unknown>("/api/auth/sign-up/email", {
+  const response = await apiRequest<AuthResponse>("/api/auth/sign-up/email", {
     method: "POST",
     body: JSON.stringify(input),
   });
+
+  storeTokenFromResponse(response);
 }
 
 export async function signOut(): Promise<void> {
-  await apiRequest<unknown>("/api/auth/sign-out", {
-    method: "POST",
-  });
+  try {
+    await apiRequest<unknown>("/api/auth/sign-out", {
+      method: "POST",
+    });
+  } finally {
+    tokenStore.clearTokens();
+  }
+}
+
+export async function refreshAccessToken(): Promise<boolean> {
+  try {
+    const response = await apiRequest<AuthResponse>("/api/auth/token", {
+      method: "POST",
+    });
+
+    const accessToken = response.token || response.accessToken;
+    const expiresIn = response.expiresIn || 900;
+
+    if (!accessToken) {
+      return false;
+    }
+
+    tokenStore.setTokens({ accessToken, expiresIn });
+    return true;
+  } catch {
+    tokenStore.clearTokens();
+    return false;
+  }
 }
 
 export async function getSession(): Promise<AuthSession | null> {
   try {
-    console.log("[Auth] Fetching session from API");
+    const token = tokenStore.getAccessToken();
+    if (!token) {
+      return null;
+    }
+
     const response = await apiRequest<SessionDto>("/api/auth/get-session");
-    console.log("[Auth] Raw session response:", response);
-    const mapped = mapSession(response);
-    console.log("[Auth] Mapped session:", mapped);
-    return mapped;
+    return mapSession(response);
   } catch (error) {
-    console.error("[Auth] Error fetching session:", error);
     if (isApiClientError(error) && error.status === 401) {
-      console.log("[Auth] 401 error, returning null");
+      tokenStore.clearTokens();
       return null;
     }
 
     throw error;
   }
 }
+
+// Register token refresh handler with the API client
+setTokenRefreshHandler(refreshAccessToken);
