@@ -33,6 +33,7 @@ const rawEnvSchema = z
     SMTP_SECURE: smtpSecureSchema,
     SMTP_USER: z.string().optional(),
     SMTP_PASS: z.string().optional(),
+    LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"]).default("info"),
     CORS_ORIGINS: z.string().url().default("http://localhost:5173"),
   })
   .superRefine((value, ctx) => {

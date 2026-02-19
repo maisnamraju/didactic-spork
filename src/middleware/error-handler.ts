@@ -1,6 +1,7 @@
 import type { ErrorRequestHandler } from "express";
 import { ZodError } from "zod";
 
+import { logger } from "../lib/logger";
 import { ApiError } from "../utils/api-error";
 
 type PrismaLikeError = {
@@ -64,7 +65,7 @@ export const errorHandlerMiddleware: ErrorRequestHandler = (error, _req, res, _n
     return;
   }
 
-  console.error(error);
+  logger.error({ err: error }, "Unhandled error");
 
   res.status(500).json({
     error: {
