@@ -23,12 +23,10 @@ interface SessionDto {
   } | null;
 }
 
-interface AuthResponse {
+interface TokenResponse {
   token?: string;
   accessToken?: string;
   expiresIn?: number;
-  user?: SessionDto["user"];
-  session?: SessionDto["session"];
 }
 
 export interface AuthSession {
@@ -60,31 +58,39 @@ function mapSession(session: SessionDto | null): AuthSession | null {
   };
 }
 
-function storeTokenFromResponse(response: AuthResponse): void {
-  const accessToken = response.token || response.accessToken;
-  const expiresIn = response.expiresIn || 900; // Default 15 minutes
+async function fetchAndStoreToken(): Promise<void> {
+  try {
+    const response = await apiRequest<TokenResponse>("/api/auth/token", {
+      method: "POST",
+    });
 
-  if (accessToken && expiresIn > 0) {
-    tokenStore.setTokens({ accessToken, expiresIn });
+    const accessToken = response.token || response.accessToken;
+    const expiresIn = response.expiresIn || 900;
+
+    if (accessToken && expiresIn > 0) {
+      tokenStore.setTokens({ accessToken, expiresIn });
+    }
+  } catch {
+    // Token fetch failed — protected routes won't work but session routes still use cookies
   }
 }
 
 export async function signIn(input: SignInInput): Promise<void> {
-  const response = await apiRequest<AuthResponse>("/api/auth/sign-in/email", {
+  await apiRequest<unknown>("/api/auth/sign-in/email", {
     method: "POST",
     body: JSON.stringify(input),
   });
 
-  storeTokenFromResponse(response);
+  await fetchAndStoreToken();
 }
 
 export async function signUp(input: SignUpInput): Promise<void> {
-  const response = await apiRequest<AuthResponse>("/api/auth/sign-up/email", {
+  await apiRequest<unknown>("/api/auth/sign-up/email", {
     method: "POST",
     body: JSON.stringify(input),
   });
 
-  storeTokenFromResponse(response);
+  await fetchAndStoreToken();
 }
 
 export async function signOut(): Promise<void> {
@@ -99,11 +105,6 @@ export async function signOut(): Promise<void> {
 
 export async function getSession(): Promise<AuthSession | null> {
   try {
-    const token = tokenStore.getAccessToken();
-    if (!token) {
-      return null;
-    }
-
     const response = await apiRequest<SessionDto>("/api/auth/get-session");
     return mapSession(response);
   } catch (error) {
