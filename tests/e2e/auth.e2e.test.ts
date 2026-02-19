@@ -1,6 +1,7 @@
 import request from "supertest";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { env } from "../../src/config/env";
 import { consumeEmailVerificationToken } from "../../src/lib/email-verification-token-store";
 import { prisma } from "../../src/lib/prisma";
 import { hasConfiguredTestDatabase, resetDatabase } from "../helpers/db";
@@ -62,18 +63,12 @@ describeWithDb("Auth e2e", () => {
     expect(userBefore).toBeTruthy();
     expect(userBefore?.emailVerified).toBe(false);
 
-    const sendVerification = await request(app).post("/api/auth/send-verification-email").send({
-      email,
-    });
-
-    expect(sendVerification.status).toBe(200);
-    expect(sendVerification.body).toEqual({ status: true });
-
+    // Token is captured automatically on sign-up (sendOnSignUp: true)
     const token = consumeEmailVerificationToken(email);
     expect(token).toBeTruthy();
 
     if (!token) {
-      throw new Error("Expected verification token to be captured");
+      throw new Error("Expected verification token to be captured on sign-up");
     }
 
     const verify = await request(app).get("/api/auth/verify-email").query({ token });
@@ -87,6 +82,32 @@ describeWithDb("Auth e2e", () => {
 
     expect(userAfter).toBeTruthy();
     expect(userAfter?.emailVerified).toBe(true);
+  });
+
+  it("logs verification URL with frontend callback on sign-up", async () => {
+    const email = `log-${Date.now()}@example.com`;
+    const password = "Password123!";
+    const consoleSpy = vi.spyOn(console, "log");
+
+    await request(app).post("/api/auth/sign-up/email").send({
+      email,
+      password,
+      name: "Log User",
+    });
+
+    const logCall = consoleSpy.mock.calls.find(
+      (args) => typeof args[0] === "string" && args[0].includes("[Auth] Verification URL for"),
+    );
+
+    expect(logCall).toBeTruthy();
+
+    const loggedUrl = logCall![0] as string;
+    expect(loggedUrl).toContain(`[Auth] Verification URL for ${email}:`);
+    expect(loggedUrl).toContain(
+      `callbackURL=${encodeURIComponent(`${env.CORS_ORIGINS}/email-verified`)}`,
+    );
+
+    consoleSpy.mockRestore();
   });
 
   it("rejects unauthenticated patient and chat access", async () => {

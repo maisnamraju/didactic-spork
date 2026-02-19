@@ -9,6 +9,7 @@ import {
 import { sessionQueryOptions } from "@/lib/queries/auth";
 import { ChatPage } from "@/routes/chat";
 import { DashboardPage } from "@/routes/dashboard";
+import { EmailVerifiedPage } from "@/routes/email-verified";
 import { SignInPage } from "@/routes/sign-in";
 import { SignUpPage } from "@/routes/sign-up";
 
@@ -56,6 +57,12 @@ const signUpRoute = createRoute({
   component: SignUpPage,
 });
 
+const emailVerifiedRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/email-verified",
+  component: EmailVerifiedPage,
+});
+
 const dashboardRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/dashboard",
@@ -88,6 +95,7 @@ const routeTree = rootRoute.addChildren([
   indexRoute,
   signInRoute,
   signUpRoute,
+  emailVerifiedRoute,
   dashboardRoute,
   chatRoute,
 ]);

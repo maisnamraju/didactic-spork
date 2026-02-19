@@ -1,70 +1,102 @@
-import { test, expect } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
-const TEST_EMAIL = "demo@teraleads.com";
-const TEST_PASSWORD = "Password123!";
+const DEMO_EMAIL = "demo@teraleads.com";
+const DEMO_PASSWORD = "Password123!";
 
-test.describe("JWT Auth Flow", () => {
-  test("sign in redirects to dashboard", async ({ page }) => {
+test.describe("Sign In", () => {
+  test("redirects to dashboard on successful sign-in", async ({ page }) => {
     await page.goto("/sign-in");
 
-    await page.getByLabel("Email").fill(TEST_EMAIL);
-    await page.getByLabel("Password").fill(TEST_PASSWORD);
+    await page.getByLabel("Email").fill(DEMO_EMAIL);
+    await page.getByLabel("Password").fill(DEMO_PASSWORD);
     await page.getByRole("button", { name: "Sign in" }).click();
 
     await expect(page).toHaveURL(/\/dashboard/, { timeout: 10_000 });
     await expect(page.getByText("Patients")).toBeVisible();
   });
 
-  test("unauthenticated user is redirected to sign-in", async ({ page }) => {
-    await page.goto("/dashboard");
-
-    await expect(page).toHaveURL(/\/sign-in/, { timeout: 5_000 });
-  });
-
-  test("sign in stores JWT and uses it for API calls", async ({ page }) => {
+  test("stores JWT and sends Authorization header on API calls", async ({ page }) => {
     await page.goto("/sign-in");
 
-    // Watch for the token request
-    const tokenRequest = page.waitForResponse(
+    const tokenResponse = page.waitForResponse(
       (res) => res.url().includes("/api/auth/token") && res.status() === 200,
     );
 
-    await page.getByLabel("Email").fill(TEST_EMAIL);
-    await page.getByLabel("Password").fill(TEST_PASSWORD);
+    await page.getByLabel("Email").fill(DEMO_EMAIL);
+    await page.getByLabel("Password").fill(DEMO_PASSWORD);
     await page.getByRole("button", { name: "Sign in" }).click();
 
-    // Verify token endpoint was called after sign-in
-    const tokenResponse = await tokenRequest;
-    const tokenBody = await tokenResponse.json();
-    expect(tokenBody.token || tokenBody.accessToken).toBeTruthy();
+    const res = await tokenResponse;
+    const body = await res.json();
+    expect(body.token || body.accessToken).toBeTruthy();
 
-    // Verify we land on dashboard
     await expect(page).toHaveURL(/\/dashboard/, { timeout: 10_000 });
 
-    // Verify subsequent API calls include Authorization header
-    const apiRequest = page.waitForRequest(
+    const apiReq = await page.waitForRequest(
       (req) => req.url().includes("/patients") && req.method() === "GET",
     );
-
-    const req = await apiRequest;
-    const authHeader = req.headers()["authorization"];
-    expect(authHeader).toMatch(/^Bearer .+/);
+    expect(apiReq.headers()["authorization"]).toMatch(/^Bearer .+/);
   });
 
-  test("sign out clears session and redirects to sign-in", async ({ page }) => {
-    // Sign in first
+  test("shows error for invalid credentials", async ({ page }) => {
     await page.goto("/sign-in");
-    await page.getByLabel("Email").fill(TEST_EMAIL);
-    await page.getByLabel("Password").fill(TEST_PASSWORD);
+
+    await page.getByLabel("Email").fill(DEMO_EMAIL);
+    await page.getByLabel("Password").fill("WrongPassword999!");
+    await page.getByRole("button", { name: "Sign in" }).click();
+
+    await expect(page.locator("[class*=destructive]")).toBeVisible({ timeout: 5_000 });
+    await expect(page).toHaveURL(/\/sign-in/);
+  });
+});
+
+test.describe("Sign Up", () => {
+  test("shows email verification message after registration", async ({ page }) => {
+    const email = `test-${Date.now()}@example.com`;
+
+    await page.goto("/sign-up");
+
+    await page.getByLabel("Full name").fill("Test User");
+    await page.getByLabel("Email").fill(email);
+    await page.getByLabel("Password").fill("SecurePass123!");
+    await page.getByRole("button", { name: "Create account" }).click();
+
+    await expect(page.getByText("Check your email")).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(email)).toBeVisible();
+    await expect(page.getByRole("link", { name: "Sign in" })).toBeVisible();
+  });
+
+  test("does not redirect to dashboard", async ({ page }) => {
+    const email = `test-${Date.now()}@example.com`;
+
+    await page.goto("/sign-up");
+
+    await page.getByLabel("Full name").fill("Test User");
+    await page.getByLabel("Email").fill(email);
+    await page.getByLabel("Password").fill("SecurePass123!");
+    await page.getByRole("button", { name: "Create account" }).click();
+
+    await expect(page.getByText("Check your email")).toBeVisible({ timeout: 10_000 });
+    await expect(page).toHaveURL(/\/sign-up/);
+  });
+});
+
+test.describe("Protected Routes", () => {
+  test("unauthenticated user is redirected to sign-in", async ({ page }) => {
+    await page.goto("/dashboard");
+    await expect(page).toHaveURL(/\/sign-in/, { timeout: 5_000 });
+  });
+
+  test("sign out clears session and redirects", async ({ page }) => {
+    await page.goto("/sign-in");
+    await page.getByLabel("Email").fill(DEMO_EMAIL);
+    await page.getByLabel("Password").fill(DEMO_PASSWORD);
     await page.getByRole("button", { name: "Sign in" }).click();
     await expect(page).toHaveURL(/\/dashboard/, { timeout: 10_000 });
 
-    // Sign out
     await page.getByRole("button", { name: /sign out|log out/i }).click();
-
     await expect(page).toHaveURL(/\/sign-in/, { timeout: 5_000 });
 
-    // Verify we can't go back to dashboard
     await page.goto("/dashboard");
     await expect(page).toHaveURL(/\/sign-in/, { timeout: 5_000 });
   });
